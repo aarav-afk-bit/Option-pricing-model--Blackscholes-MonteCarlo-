@@ -1,0 +1,31 @@
+/* ---------- Monte Carlo Lab ---------- */
+.mc-lab{ border-color:var(--amber-dim); }
+.mc-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; padding:10px 13px; border-bottom:1px solid var(--border-soft); font-size:11px; color:var(--text-dim); }
+.mc-controls label{ display:flex; align-items:center; gap:6px; }
+.mc-controls select{ background:var(--panel2); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:11px; padding:5px 6px; border-radius:5px; }
+.mc-check input{ accent-color:var(--amber); }
+.mc-controls .run-btn{ padding:7px 14px; }
+.mc-status{ margin-left:auto; font-family:var(--mono); font-size:10.5px; color:var(--text-faint); }
+.mc-status.err{ color:var(--red); }
+
+.mc-compare{ display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:10px; padding:12px 13px; }
+.mc-empty{ grid-column:1/-1; text-align:center; color:var(--text-faint); font-size:11.5px; padding:14px; }
+.mc-model{ border:1px solid var(--border-soft); border-radius:8px; padding:10px 12px; background:var(--panel); display:flex; flex-direction:column; gap:3px; }
+.mc-model.bs{ background:rgba(127,212,255,0.05); border-color:rgba(127,212,255,0.25); }
+.mc-model.market{ background:rgba(255,176,32,0.06); border-color:var(--amber-dim); }
+.mc-model .name{ font-family:var(--mono); font-size:10px; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-dim); }
+.mc-model .px{ font-family:var(--mono); font-size:20px; font-weight:800; color:var(--text); }
+.mc-model.bs .px{ color:#7fd4ff; }
+.mc-model.market .px{ color:var(--amber); }
+.mc-model .ci, .mc-model .diff, .mc-model .meta{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); }
+.mc-model .diff.agree{ color:var(--green); }
+.mc-model .diff.differ{ color:var(--amber); }
+.mc-model .desc{ font-size:10.5px; color:var(--text-faint); line-height:1.4; margin-top:3px; }
+.mc-note{ padding:0 13px 12px; font-size:10.5px; color:var(--text-faint); line-height:1.5; }
+.mc-lab.running .mc-compare{ opacity:0.5; transition:opacity .2s; }
+
+.mc-charts{ display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:10px; padding:0 13px 12px; }
+.mc-chart{ border:1px solid var(--border-soft); border-radius:8px; background:var(--panel); padding:8px 10px; }
+.mc-chart-title{ font-family:var(--mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-dim); margin-bottom:4px; }
+.mc-chart-body{ height:220px; }
+.mc-chart-foot{ font-size:10.5px; color:var(--text-faint); margin-top:4px; line-height:1.4; }
