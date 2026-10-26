@@ -28,6 +28,7 @@ Notes / known limitations:
   notice. Treat it as best-effort market data, not a guaranteed feed.
 """
 
+import logging
 import threading
 import time
 
@@ -51,6 +52,8 @@ HEADERS = {
 }
 
 INDEX_SYMBOLS = {"NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"}
+
+log = logging.getLogger(__name__)
 
 
 class NSEClient:
@@ -102,6 +105,8 @@ class NSEClient:
             self._refresh_session()
             time.sleep(0.6 * (attempt + 1))
 
+        log.warning("NSE request failed after %d attempts: %s %s (last status: %s)",
+                    retries + 1, url, params or "", last_status)
         raise RuntimeError(f"NSE request failed for {url} (last status: {last_status})")
 
     def _cached(self, key, fetch):

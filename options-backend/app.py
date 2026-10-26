@@ -17,6 +17,7 @@ Run:
 """
 
 import json
+import logging
 import math
 import os
 from datetime import datetime, timezone
@@ -24,6 +25,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 
 from liquidity import liquidity_summary
 from nse_client import nse_client, INDEX_SYMBOLS
@@ -43,6 +45,25 @@ app = Flask(__name__)
 # a preview + production URL). Defaults to "*" for local development.
 _allowed_origins = os.environ.get("FRONTEND_ORIGIN", "*")
 CORS(app, origins=_allowed_origins.split(",") if _allowed_origins != "*" else "*")
+
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+log = logging.getLogger("options_terminal")
+
+
+# The frontend always reads `error` from a JSON body, so errors must never
+# come back as Flask's default HTML pages.
+@app.errorhandler(HTTPException)
+def http_error(exc):
+    return jsonify({"error": exc.description, "status": exc.code}), exc.code
+
+
+@app.errorhandler(Exception)
+def unexpected_error(exc):
+    log.exception("Unhandled error on %s %s", request.method, request.path)
+    return jsonify({"error": "internal server error", "status": 500}), 500
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 IST = ZoneInfo("Asia/Kolkata")
