@@ -27,6 +27,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 
+import config
 from liquidity import liquidity_summary
 from nse_client import nse_client, INDEX_SYMBOLS
 from pricing import (
@@ -187,7 +188,7 @@ def analyze(symbol):
         return jsonify({"error": "type must be 'call' or 'put'"}), 400
 
     try:
-        r = _float_arg("r", 0.065)
+        r = _float_arg("r", config.RISK_FREE_RATE)
         q_override = _float_arg("q")
         sigma_override = _float_arg("sigma")
     except ValueError:
@@ -229,15 +230,15 @@ def analyze(symbol):
     elif nse_iv:
         sigma = nse_iv / 100
     else:
-        sigma = 0.25  # fallback when NSE hasn't computed an IV yet (e.g. illiquid strike)
+        sigma = config.FALLBACK_SIGMA  # NSE hasn't computed an IV yet (e.g. illiquid strike)
 
     q = q_override / 100 if q_override is not None else 0.0
 
     bs = black_scholes(spot, strike, T, r, sigma, q)
     gk = greeks(spot, strike, T, r, sigma, q)
-    crr_euro = crr_price(spot, strike, T, r, sigma, q, 150, option_type, american=False)
-    crr_amer = crr_price(spot, strike, T, r, sigma, q, 150, option_type, american=True)
-    mc_price, mc_se = monte_carlo(spot, strike, T, r, sigma, q, 30000, option_type)
+    crr_euro = crr_price(spot, strike, T, r, sigma, q, config.CRR_STEPS, option_type, american=False)
+    crr_amer = crr_price(spot, strike, T, r, sigma, q, config.CRR_STEPS, option_type, american=True)
+    mc_price, mc_se = monte_carlo(spot, strike, T, r, sigma, q, config.MC_SIMULATIONS, option_type)
     solved_iv = implied_volatility(market_price, spot, strike, T, r, q, option_type)
     liquidity = liquidity_summary(leg, bs["call"] if option_type == "call" else bs["put"])
     # IV from the bid/ask mid is often more trustworthy than from a stale LTP.

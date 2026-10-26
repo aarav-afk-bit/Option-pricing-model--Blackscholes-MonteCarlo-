@@ -36,6 +36,15 @@ service with everything below already filled in.
 | Env var `PYTHON_VERSION` | `3.11.9` |
 | Env var `FRONTEND_ORIGIN` | your Vercel URL (or `*`) |
 
+Optional tuning variables (see `config.py`; invalid values fall back to the default):
+
+| Env var | Default | Meaning |
+|---|---|---|
+| `RISK_FREE_RATE` | `0.065` | r used when a request doesn't pass one (decimal) |
+| `FALLBACK_SIGMA` | `0.25` | volatility when NSE reports no IV for a strike (decimal) |
+| `CRR_STEPS` | `150` | binomial tree steps |
+| `MC_SIMULATIONS` | `30000` | Monte Carlo paths |
+
 Then **Manual Deploy → Deploy latest commit**. Check
 `https://<your-service>.onrender.com/api/health` returns `{"status": "ok"}`,
 and put that base URL in `options-frontend/js/config.js`.
