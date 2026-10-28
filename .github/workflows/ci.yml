@@ -21,6 +21,8 @@ jobs:
             options-backend/requirements.txt
             options-backend/requirements-dev.txt
       - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Lint
+        run: ruff check . --output-format=github
       - run: python -m pytest -v
 
   frontend:

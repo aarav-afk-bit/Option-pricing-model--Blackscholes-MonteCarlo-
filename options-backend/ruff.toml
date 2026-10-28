@@ -1,0 +1,8 @@
+# Lint settings for the backend. Run from options-backend/:  ruff check .
+line-length = 120
+target-version = "py311"
+
+[lint]
+# pycodestyle errors/warnings, pyflakes (unused names, undefined names) and
+# bugbear (likely bugs such as mutable defaults or loop-variable closures).
+select = ["E", "F", "W", "B"]

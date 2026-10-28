@@ -52,6 +52,16 @@ and put that base URL in `options-frontend/js/config.js`.
 The free plan sleeps after ~15 minutes idle; the first request afterwards
 takes ~30–60s (the frontend retries while it wakes up).
 
+## Tests and lint
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest     # unit + API tests, no network needed
+ruff check .         # lint (settings in ruff.toml)
+```
+
+Both run in CI on every pull request.
+
 ## How the NSE fetch works
 
 `nse_client.py` opens a `requests.Session()`, first loads `nseindia.com` and
