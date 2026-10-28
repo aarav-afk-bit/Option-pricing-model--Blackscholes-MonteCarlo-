@@ -14,15 +14,47 @@ TRADING_DAYS = 252
 # Core pricing models
 # ------------------------------------------------------------------
 
+def _forward_intrinsic(S, K, T, r, q):
+    """S e^(-qT) - K e^(-rT): what a call is worth when nothing is uncertain."""
+    t = max(T, 0.0)
+    return float(S * np.exp(-q * t) - K * np.exp(-r * t))
+
+
+def _limit_greeks(S, K, T, r, q):
+    """
+    Greeks in the limit T -> 0 or sigma -> 0, where the option is either surely
+    in or surely out of the money. Delta is 0 or +/-1 (discounted for dividends),
+    exactly at the money it is +/-0.5, and every curvature/vol Greek is 0.
+    Theta and rho are those of the deterministic payoff.
+    """
+    t = max(T, 0.0)
+    fwd = _forward_intrinsic(S, K, T, r, q)
+    w_call = 1.0 if fwd > 0 else 0.5 if fwd == 0 else 0.0  # weight on "call finishes ITM"
+    w_put = 1.0 - w_call
+    disc_s, disc_k = S * np.exp(-q * t), K * np.exp(-r * t)
+    return {
+        "callDelta": float(np.exp(-q * t) * w_call),
+        "putDelta": float(-np.exp(-q * t) * w_put),
+        "gamma": 0.0,
+        "vega": 0.0,
+        "callTheta": float(w_call * (q * disc_s - r * disc_k)),
+        "putTheta": float(w_put * (r * disc_k - q * disc_s)),
+        "callRho": float(w_call * K * t * np.exp(-r * t)),
+        "putRho": float(-w_put * K * t * np.exp(-r * t)),
+        "vanna": 0.0,
+        "vomma": 0.0,
+        "callCharm": 0.0,
+        "putCharm": 0.0,
+    }
+
+
 def black_scholes(S, K, T, r, sigma, q=0.0):
     """European option price via closed-form Black-Scholes-Merton."""
-    if T <= 0:
-        return {
-            "call": max(S - K, 0),
-            "put": max(K - S, 0),
-            "d1": None,
-            "d2": None,
-        }
+    if T <= 0 or sigma <= 0:
+        # No uncertainty left (expired, or zero volatility): the option is worth
+        # its discounted forward intrinsic value. At T=0 that is plain intrinsic.
+        fwd = _forward_intrinsic(S, K, T, r, q)
+        return {"call": max(fwd, 0.0), "put": max(-fwd, 0.0), "d1": None, "d2": None}
 
     d1 = (np.log(S / K) + (r - q + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
@@ -38,7 +70,13 @@ def greeks(S, K, T, r, sigma, q=0.0):
     Delta, Gamma, Vega, Theta, Rho for both call and put, plus the
     second-order Greeks Vanna (dDelta/dVol), Vomma (dVega/dVol) and Charm
     (delta drift per year as time passes). All per unit, per year.
+
+    With T <= 0 or sigma <= 0 the formulas divide by zero, so the limiting
+    values are returned instead (see _limit_greeks).
     """
+    if T <= 0 or sigma <= 0:
+        return _limit_greeks(S, K, T, r, q)
+
     d1 = (np.log(S / K) + (r - q + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
     pdf_d1 = norm.pdf(d1)
@@ -88,6 +126,13 @@ def greeks(S, K, T, r, sigma, q=0.0):
 
 def crr_price(S, K, T, r, sigma, q=0.0, steps=150, option_type="call", american=True):
     """Cox-Ross-Rubinstein binomial tree price (European or American)."""
+    if T <= 0 or sigma <= 0:
+        # The tree collapses (u = d = 1); price the deterministic payoff directly.
+        bs = black_scholes(S, K, T, r, sigma, q)
+        european = bs["call"] if option_type.lower() == "call" else bs["put"]
+        intrinsic = max(S - K, 0.0) if option_type.lower() == "call" else max(K - S, 0.0)
+        return float(max(european, intrinsic)) if american else float(european)
+
     dt = T / steps
     u = np.exp(sigma * np.sqrt(dt))
     d = 1 / u
@@ -127,6 +172,11 @@ def monte_carlo(S, K, T, r, sigma, q=0.0, simulations=30000, option_type="call",
     two payoffs are averaged. Same number of simulated paths, noticeably
     lower standard error, because the pair's errors partly cancel.
     """
+    if T <= 0 or sigma <= 0:
+        # Nothing random left to simulate: every path gives the same payoff.
+        bs = black_scholes(S, K, T, r, sigma, q)
+        return float(bs["call"] if option_type.lower() == "call" else bs["put"]), 0.0
+
     rng = np.random.default_rng(seed)
     pairs = max(simulations // 2, 1)
     Z = rng.standard_normal(pairs)
@@ -149,7 +199,7 @@ def monte_carlo(S, K, T, r, sigma, q=0.0, simulations=30000, option_type="call",
 
 def implied_volatility(market_price, S, K, T, r, q=0.0, option_type="call"):
     """Solve for the volatility that reprices `market_price` under Black-Scholes."""
-    if not market_price or market_price <= 0:
+    if not market_price or market_price <= 0 or T <= 0:
         return None
 
     def objective(vol):
