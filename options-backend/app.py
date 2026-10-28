@@ -109,6 +109,25 @@ def _float_arg(name, default=None):
     return value
 
 
+def _by_side(values, option_type):
+    """Pick the call or put entry from a {"call": ..., "put": ...} dict."""
+    return values["call"] if option_type == "call" else values["put"]
+
+
+def _find_leg(records, expiry, strike, option_type):
+    """
+    Locate one contract in a normalised NSE chain.
+
+    Returns (row, leg): row is None if the strike/expiry isn't listed, and leg
+    is None if the row has no CE/PE side for `option_type`. Strikes are
+    compared as floats because NSE may send 24500 or 24500.0.
+    """
+    for row in records.get("data", []):
+        if row.get("expiryDate") == expiry and abs(float(row.get("strikePrice")) - strike) < 1e-6:
+            return row, row.get("CE" if option_type == "call" else "PE")
+    return None, None
+
+
 # ------------------------------------------------------------------
 # Routes
 # ------------------------------------------------------------------
@@ -206,16 +225,9 @@ def analyze(symbol):
     if spot is None:
         return jsonify({"error": "NSE did not return an underlying price for this symbol"}), 502
 
-    row = next(
-        (d for d in records.get("data", [])
-         if d.get("expiryDate") == expiry
-         and abs(float(d.get("strikePrice")) - strike) < 1e-6),
-        None,
-    )
+    row, leg = _find_leg(records, expiry, strike, option_type)
     if row is None:
         return jsonify({"error": "that strike/expiry is not in the live NSE chain"}), 404
-
-    leg = row.get("CE") if option_type == "call" else row.get("PE")
     if leg is None:
         return jsonify({"error": f"no live {option_type} data for this strike/expiry"}), 404
 
@@ -240,11 +252,11 @@ def analyze(symbol):
     crr_amer = crr_price(spot, strike, T, r, sigma, q, config.CRR_STEPS, option_type, american=True)
     mc_price, mc_se = monte_carlo(spot, strike, T, r, sigma, q, config.MC_SIMULATIONS, option_type)
     solved_iv = implied_volatility(market_price, spot, strike, T, r, q, option_type)
-    liquidity = liquidity_summary(leg, bs["call"] if option_type == "call" else bs["put"])
+    fair_value = _by_side(bs, option_type)
+    liquidity = liquidity_summary(leg, fair_value)
     # IV from the bid/ask mid is often more trustworthy than from a stale LTP.
     mid_iv = implied_volatility(liquidity["mid"], spot, strike, T, r, q, option_type)
 
-    fair_value = bs["call"] if option_type == "call" else bs["put"]
     suggestion = build_suggestion(strike, option_type, fair_value, market_price, gk)
 
     return jsonify({
