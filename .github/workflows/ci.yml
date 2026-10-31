@@ -34,5 +34,7 @@ jobs:
           node-version: 22
       - name: Syntax-check frontend scripts
         run: for f in options-frontend/js/*.js; do node --check "$f"; done
+      - name: Frontend unit tests
+        run: node --test 'options-frontend/tests/*.test.js'
       - name: Validate JSON data files
         run: for f in options-frontend/data/*.json options-backend/data/*.json; do node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"; done
