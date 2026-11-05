@@ -7,8 +7,6 @@ import numpy as np
 from scipy.stats import norm
 from scipy.optimize import brentq
 
-TRADING_DAYS = 252
-
 
 # ------------------------------------------------------------------
 # Core pricing models

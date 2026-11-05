@@ -200,13 +200,6 @@ class NSEClient:
             )
         return data
 
-    def get_quote(self, symbol, is_index=False):
-        """Underlying spot price + basic quote info, independent of option chain."""
-        symbol = symbol.upper()
-        endpoint = "api/equity-stockIndices" if is_index else "api/quote-equity"
-        params = {"index": symbol} if is_index else {"symbol": symbol}
-        return self._get_json(f"{NSE_BASE}/{endpoint}", params=params)
-
 
 def _normalise(raw, expiries=None):
     """Map v3 / legacy NSE payloads onto one shape the API layer can rely on."""
