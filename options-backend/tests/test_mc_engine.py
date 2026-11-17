@@ -66,3 +66,19 @@ def test_convergence_series_narrows_and_reduced_beats_plain():
     assert all(p["reduced"]["stdError"] < p["plain"]["stdError"] for p in series)
     # The last checkpoint uses all the draws, so it equals the full estimate.
     assert series[-1]["reduced"]["price"] == pytest.approx(price_gbm(CASES[0], 0.2, 40_000, seed=2)["price"])
+
+
+def test_path_fan_shapes_and_statistics():
+    from montecarlo.engine import gbm_fan
+    from pricing import black_scholes as bs_
+    c = Contract(S=100, K=105, T=0.5, r=0.05, q=0.0, option_type="call")
+    fan = gbm_fan(c, 0.25, paths=20_000, steps=40, seed=1)
+    assert len(fan["days"]) == 41 and fan["days"][-1] == pytest.approx(182.5)
+    assert len(fan["samples"]) == 24 and len(fan["samples"][0]) == 41
+    assert fan["p5"][0] == fan["p95"][0] == 100            # every path starts at spot
+    bands = zip(fan["p5"], fan["p25"], fan["p50"], fan["p75"], fan["p95"], strict=True)
+    assert all(a <= b <= c_ <= d <= e for a, b, c_, d, e in bands)
+    # Share finishing ITM matches the risk-neutral N(d2).
+    from scipy.stats import norm
+    d2 = bs_(100, 105, 0.5, 0.05, 0.25)["d2"]
+    assert fan["finalItmShare"] == pytest.approx(norm.cdf(d2), abs=0.01)

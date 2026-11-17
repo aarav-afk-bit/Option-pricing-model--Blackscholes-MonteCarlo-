@@ -114,6 +114,44 @@
       `than plain Monte Carlo — plain MC would need about ${Math.round(ratio*ratio)}× as many paths to match it.`;
   }
 
+  /* Fan of simulated price paths: 5-95% and 25-75% bands, median, a few
+     example paths and the strike, over the days to expiry. */
+  function renderFan(data){
+    const fan = data.fan;
+    if(!fan) return;
+    const xy = (arr)=> arr.map((y, i)=>({ x:fan.days[i], y }));
+    const K = data.inputs.strike;
+    const datasets = fan.samples.map((path, i)=>({
+      label:'_sample'+i, data:xy(path), borderColor:'rgba(155,156,143,0.18)', borderWidth:1, pointRadius:0,
+    }));
+    datasets.push(
+      { label:'_p95', data:xy(fan.p95), borderWidth:0, pointRadius:0, fill:false },
+      { label:'5–95% of paths', data:xy(fan.p5), borderWidth:0, pointRadius:0, backgroundColor:'rgba(255,176,32,0.10)', fill:'-1' },
+      { label:'_p75', data:xy(fan.p75), borderWidth:0, pointRadius:0, fill:false },
+      { label:'25–75% of paths', data:xy(fan.p25), borderWidth:0, pointRadius:0, backgroundColor:'rgba(255,176,32,0.22)', fill:'-1' },
+      { label:'Median path', data:xy(fan.p50), borderColor:'#ffb020', borderWidth:2, pointRadius:0 },
+      { label:'Strike', data:[{x:0, y:K}, {x:fan.days[fan.days.length-1], y:K}], borderColor:'#7fd4ff', borderDash:[5,4], borderWidth:1.5, pointRadius:0 },
+    );
+    drawChart('mcFan', {
+      type:'line', data:{ datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:false,
+        interaction:{ mode:'nearest', intersect:false },
+        plugins:{ legend:LEGEND, tooltip:{ ...TOOLTIP, filter:(i)=> !i.dataset.label.startsWith('_'),
+          callbacks:{ title:(it)=> it.length ? `Day ${it[0].parsed.x.toFixed(0)}` : '',
+                      label:(c)=> `${c.dataset.label}: ${rupees(c.parsed.y, 0)}` } } },
+        scales:{
+          x:{ type:'linear', min:0, max:fan.days[fan.days.length-1], ticks:{ ...TICK, maxRotation:0 }, grid:GRID, title:axisTitle('Days from today') },
+          y:{ ticks:{ ...TICK, callback:(v)=> Number(v).toLocaleString('en-IN') }, grid:GRID, title:axisTitle('Underlying price') },
+        },
+      },
+    });
+    const side = data.inputs.type === 'call' ? 'above' : 'below';
+    $('mcFanFoot').textContent =
+      `${(fan.finalItmShare*100).toFixed(1)}% of simulated paths finish ${side} the strike of ${rupees(K, 0)} (in the money). ` +
+      `Half of them end between ${rupees(fan.p25[fan.p25.length-1], 0)} and ${rupees(fan.p75[fan.p75.length-1], 0)}.`;
+  }
+
   async function run(){
     const { inputs, market, error } = readInputs();
     const status = $('mcStatus');
@@ -130,6 +168,7 @@
       if(runId !== lastRun) return;   // a newer run started meanwhile
       render(data, market);
       renderConvergence(data);
+      renderFan(data);
       status.textContent = `Done in ${data.elapsedMs.toFixed(0)} ms on the server.`;
       window.dispatchEvent(new CustomEvent('mc-lab:result', { detail:{ data, market } }));
     }catch(err){

@@ -153,3 +153,38 @@ def gbm_convergence(contract, sigma, paths=50_000, seed=None, points=12):
             "reduced": {"price": reduced["price"], "stdError": reduced["stdError"]},
         })
     return series
+
+
+def gbm_paths(contract, sigma, n_pairs, steps, rng):
+    """Full price paths under GBM: array of shape (2*n_pairs, steps+1), column 0 = spot."""
+    dt = contract.T / steps
+    z = antithetic_normals(rng, n_pairs, (steps,))
+    increments = (contract.r - contract.q - 0.5 * sigma ** 2) * dt + sigma * np.sqrt(dt) * z
+    log_paths = np.concatenate([np.zeros((2 * n_pairs, 1)), np.cumsum(increments, axis=1)], axis=1)
+    return contract.S * np.exp(log_paths)
+
+
+def path_fan(contract, paths, samples=24):
+    """
+    Summary of simulated price paths for plotting: percentile bands at each
+    time step, a few example paths, and how many paths finish in the money.
+    """
+    steps = paths.shape[1] - 1
+    days = np.linspace(0.0, contract.T * 365, steps + 1)
+    bands = {f"p{p}": np.percentile(paths, p, axis=0).round(2).tolist() for p in (5, 25, 50, 75, 95)}
+    pick = np.linspace(0, paths.shape[0] // 2 - 1, samples).astype(int)  # spread across the non-mirrored half
+    final = paths[:, -1]
+    itm = final > contract.K if contract.is_call else final < contract.K
+    return {
+        "days": days.round(3).tolist(),
+        **bands,
+        "samples": paths[pick].round(2).tolist(),
+        "finalItmShare": float(np.mean(itm)),
+    }
+
+
+def gbm_fan(contract, sigma, paths=4_000, steps=60, seed=None):
+    if contract.T <= 0 or sigma <= 0:
+        return None
+    rng = make_rng(None if seed is None else seed + 1)
+    return path_fan(contract, gbm_paths(contract, sigma, max(paths // 2, 2), steps, rng))
