@@ -112,3 +112,34 @@ fails or every 4 minutes.
 curl "http://localhost:5000/api/option-chain/RELIANCE"
 curl "http://localhost:5000/api/analyze/RELIANCE?strike=1340&expiry=28-Aug-2025&type=call"
 ```
+
+## Monte Carlo Lab
+
+Simulation-based pricing that runs side by side with Black-Scholes
+(`montecarlo/` package, routes in `mc_routes.py`).
+
+| Model | File | What it adds over Black-Scholes | Checked against |
+|---|---|---|---|
+| Constant vol | `engine.py` | Nothing — the sanity check. Antithetic variates + a control variate make it ~25× more efficient than plain MC | Black-Scholes |
+| Heston | `heston.py` | Volatility moves randomly and rises when prices fall (skew). Simulated with Andersen's QE scheme | Heston's Fourier formula |
+| Merton jumps | `jumps.py` | Sudden gaps on top of normal moves (fat tails), simulated exactly | Merton's series formula |
+| American | `american.py` | Early exercise, by Longstaff-Schwartz regression | CRR binomial tree |
+
+`calibrate.py` fits Black-Scholes (one vol), Heston and Merton to the live
+option chain for one expiry and reports each fit's error in implied-vol
+points — this is where the richer models beat Black-Scholes, which cannot
+reproduce the volatility smile.
+
+```bash
+# Price one contract with every model (rate/div/vol in %, days = calendar days)
+curl "http://localhost:5000/api/montecarlo?spot=24512&strike=24500&days=30&vol=13&type=call&paths=50000"
+
+# Optional model settings: hVol0, hVolLong, hKappa, hXi, hRho (Heston),
+#                          jDiffVol, jLambda, jMean, jVol (Merton); seed for repeatable runs
+
+# Fit the models to today's chain; `labSettings` plugs back into the call above
+curl "http://localhost:5000/api/montecarlo/calibrate/NIFTY?expiry=30-Dec-2026&rate=6.5"
+```
+
+`paths` is limited to 1,000–200,000; American pricing uses at most 40,000.
+A 50,000-path request with every model takes about a second.

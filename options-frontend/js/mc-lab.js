@@ -256,6 +256,65 @@
     run();
   }
 
+  /* ---------- Scoreboard: which model is closest to the market price? ---------- */
+  const SCORE_NAMES = { blackScholes:'Black-Scholes', heston:'Heston', jumps:'Merton jumps' };
+
+  function isCalibrated(){
+    return !!lastCalibration && lastCalibration.symbol === $('pSymbol').value.trim().toUpperCase()
+      && lastCalibration.expiry === $('expirySelect').value
+      && document.querySelector('#mcSettings [data-param="hXi"]').value !== '';
+  }
+
+  function renderScoreboard(data, market){
+    const box = $('mcScore');
+    if(!market){ box.hidden = true; return; }
+    // Constant-vol simulation is Black-Scholes by another route, and American exercise answers a
+    // different question (NSE options are European), so neither is ranked separately.
+    const prices = { blackScholes:data.blackScholes.price };
+    ['heston', 'jumps'].forEach(id=>{ if(data.models[id]) prices[id] = data.models[id].price; });
+    const rows = Object.entries(prices)
+      .map(([id, price])=>({ id, price, err:Math.abs(price - market), pct:Math.abs(price - market)/market }))
+      .sort((a, b)=> a.err - b.err);
+    const best = rows[0], bs = rows.find(r=>r.id==='blackScholes');
+    const worst = Math.max(...rows.map(r=>r.err), 1e-9);
+    const pct = (r)=> `${(r.pct*100).toFixed(1)}%`;
+
+    let verdict;
+    if(isCalibrated()){
+      // Fitted to the whole chain, the best-fitting model gives this strike's "fair" price
+      // relative to its neighbours; a gap means this quote is cheap or rich versus the chain.
+      const fitId = lastCalibration.best;
+      const fair = prices[fitId];
+      const gap = (market - fair) / fair;
+      const rel = Math.abs(gap) < 0.02 ? 'in line with' : gap < 0 ? 'cheap relative to' : 'rich relative to';
+      verdict = `Calibrated to today's ${esc(lastCalibration.expiry)} chain, the best-fitting model (<strong>${SCORE_NAMES[fitId]}</strong>) ` +
+        `values this option at <strong>${rupees(fair)}</strong>. The market price ${rupees(market)} is ` +
+        `<strong>${Math.abs(gap*100).toFixed(1)}% ${gap < 0 ? 'below' : 'above'}</strong> that — ${rel} the rest of the chain` +
+        (Math.abs(gap) < 0.02 ? '.' : ' (check the quote is not stale before acting on it).');
+    }else if(best.id === 'blackScholes'){
+      verdict = `With default settings Black-Scholes is closest to the market price (${rupees(market)}), off by <strong>${rupees(bs.err)}</strong> (${pct(bs)}). ` +
+        `Calibrate to the market for a fairer comparison.`;
+    }else{
+      verdict = `<strong>${SCORE_NAMES[best.id]}</strong> is closest to the market price of ${rupees(market)}: off by <strong>${rupees(best.err)}</strong> ` +
+        `(${pct(best)}) against <strong>${rupees(bs.err)}</strong> (${pct(bs)}) for Black-Scholes.`;
+    }
+
+    const lo = Math.min(...rows.map(r=>r.price)), hi = Math.max(...rows.map(r=>r.price));
+    const inside = market >= lo && market <= hi;
+    box.hidden = false;
+    box.innerHTML = `<div class="mc-score-verdict">${verdict}</div>` +
+      rows.map((r, i)=> `<div class="mc-score-row ${i===0 ? 'best' : ''}">
+          <span class="nm">${esc(SCORE_NAMES[r.id])}${i===0 ? ' ★ closest' : ''}</span>
+          <span class="val">${rupees(r.price)}</span>
+          <span class="bar"><span style="width:${(r.err/worst*100).toFixed(1)}%"></span></span>
+          <span class="err">${signed(r.price - market)}</span>
+        </div>`).join('') +
+      `<div class="mc-score-foot">Bars show each model's distance from the market price` +
+      `${isCalibrated() ? ', using settings calibrated to today\'s chain' : ' using default settings — press "Calibrate to market", then "Use calibrated settings", for the fairest comparison'}. ` +
+      `The models span ${rupees(lo)} – ${rupees(hi)}; the market is ${inside ? 'inside' : 'outside'} that range. ` +
+      `Matching today's price is not a forecast — educational only.</div>`;
+  }
+
   async function run(){
     const { inputs, market, error } = readInputs();
     const status = $('mcStatus');
@@ -271,6 +330,7 @@
       const data = await apiGet('/api/montecarlo?' + new URLSearchParams(params));
       if(runId !== lastRun) return;   // a newer run started meanwhile
       render(data, market);
+      renderScoreboard(data, market);
       renderConvergence(data);
       renderFan(data);
       status.textContent = `Done in ${data.elapsedMs.toFixed(0)} ms on the server.`;

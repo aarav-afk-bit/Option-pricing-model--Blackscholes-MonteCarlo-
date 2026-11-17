@@ -45,3 +45,20 @@ in `index.html`:
    network call. Useful for "what if IV were 30% instead" scenarios.
 5. Charts are always drawn client-side from whichever inputs are currently in
    the parameter strip, live or hand-edited.
+
+## Monte Carlo Lab
+
+The section under the pricing cards (`js/mc-lab.js`, `css/mc-lab.css`) prices
+the contract in the input strip by simulation next to Black-Scholes:
+
+1. It runs automatically after every **Fetch Live** or **Recalc Local** (or
+   press **Run simulation**), showing each model's price with its 95%
+   interval, a convergence chart and a fan of simulated price paths.
+2. **Calibrate to market** fits the models to today's option chain for the
+   selected expiry and plots each model's smile against the market's.
+3. **Use calibrated settings** re-prices the contract with the market-fitted
+   models, and the scoreboard ranks every model by how close it comes to the
+   market price.
+
+The lab is self-contained: it reads the dashboard's inputs and watches the
+status line, so `app.js` needs no changes to support it.
