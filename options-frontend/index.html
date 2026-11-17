@@ -269,6 +269,18 @@
         <button class="run-btn" id="mcRun">RUN SIMULATION</button>
         <span class="mc-status" id="mcStatus">Uses the inputs in the strip above.</span>
       </div>
+      <details class="mc-settings" id="mcSettings">
+        <summary>Model settings</summary>
+        <div class="mc-settings-grid" data-model="heston">
+          <span class="mc-settings-title">Heston (stochastic vol)</span>
+          <label>Starting vol %<input type="number" step="0.5" data-param="hVol0" placeholder="= σ"></label>
+          <label>Long-run vol %<input type="number" step="0.5" data-param="hVolLong" placeholder="= σ"></label>
+          <label>Mean reversion κ<input type="number" step="0.1" data-param="hKappa" placeholder="2.0"></label>
+          <label>Vol of vol ξ<input type="number" step="0.05" data-param="hXi" placeholder="0.4"></label>
+          <label>Correlation ρ<input type="number" step="0.05" min="-0.99" max="0.99" data-param="hRho" placeholder="-0.6"></label>
+          <span class="mc-settings-hint">Blank = default. Negative ρ means volatility rises when the price falls (typical for Indian equities).</span>
+        </div>
+      </details>
       <div class="mc-compare" id="mcCompare">
         <div class="mc-empty">Fetch live data (or fill the inputs above) and the lab will price the same option by simulation next to Black-Scholes.</div>
       </div>
@@ -279,7 +291,12 @@
           <div class="mc-chart-foot" id="mcConvergenceFoot"></div>
         </div>
         <div class="mc-chart">
-          <div class="mc-chart-title">Simulated futures: where the price could go</div>
+          <div class="mc-chart-title">Simulated futures: where the price could go
+            <select id="mcFanModel" class="mc-inline-select">
+              <option value="gbm">Constant vol</option>
+              <option value="heston">Heston</option>
+            </select>
+          </div>
           <div class="mc-chart-body"><canvas id="mcFan"></canvas></div>
           <div class="mc-chart-foot" id="mcFanFoot"></div>
         </div>

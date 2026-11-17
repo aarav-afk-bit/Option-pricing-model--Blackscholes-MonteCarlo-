@@ -22,6 +22,10 @@
     }
     if(isNaN(inputs.rate)) inputs.rate = 6.5;
     if(isNaN(inputs.div)) inputs.div = 0;
+    // Optional model settings: only filled-in fields are sent; the server defaults the rest.
+    document.querySelectorAll('#mcSettings [data-param]').forEach(el=>{
+      if(el.value.trim() !== '') inputs[el.dataset.param] = el.value.trim();
+    });
     return { inputs, market: num('pMarket') || null };
   }
 
@@ -43,6 +47,9 @@
       `<span class="diff ${agrees ? 'agree' : 'differ'}">${signed(diff)} vs Black-Scholes${agrees ? ' · agrees' : ''}</span>`,
       `<span class="meta">${m.paths.toLocaleString('en-IN')} paths${m.efficiencyGain ? ` · ${m.efficiencyGain.toFixed(0)}× fewer paths than plain MC` : ''}</span>`,
     ];
+    if(m.formulaPrice != null){
+      lines.push(`<span class="meta">Formula check: ${rupees(m.formulaPrice)}</span>`);
+    }
     return card('', m.label, m.price, lines, m.description);
   }
 
@@ -116,8 +123,10 @@
 
   /* Fan of simulated price paths: 5-95% and 25-75% bands, median, a few
      example paths and the strike, over the days to expiry. */
+  let lastData = null;
   function renderFan(data){
-    const fan = data.fan;
+    lastData = data;
+    const fan = (data.fans || {})[$('mcFanModel').value];
     if(!fan) return;
     const xy = (arr)=> arr.map((y, i)=>({ x:fan.days[i], y }));
     const K = data.inputs.strike;
@@ -181,6 +190,8 @@
   }
 
   $('mcRun').addEventListener('click', run);
+  $('mcFanModel').addEventListener('change', ()=>{ if(lastData) renderFan(lastData); });
+  $('mcSettings').addEventListener('change', ()=>{ if(lastRun) run(); });
   $('mcPaths').addEventListener('change', ()=>{ if(lastRun) run(); });
 
   // Re-run automatically whenever the dashboard finishes a live fetch or local recalc.

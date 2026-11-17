@@ -58,3 +58,23 @@ def test_rejects_bad_input(client, query, message):
 def test_registered_on_the_main_app():
     from app import app
     assert any(rule.rule == "/api/montecarlo" for rule in app.url_map.iter_rules())
+
+
+def test_heston_model_is_returned_with_its_settings(client):
+    body = client.get(f"/api/montecarlo?{QUERY}").get_json()
+    heston = body["models"]["heston"]
+    assert heston["params"]["vol0"] == pytest.approx(0.13)
+    assert heston["params"]["rho"] == pytest.approx(-0.6)
+    assert abs(heston["price"] - heston["formulaPrice"]) < 4 * heston["stdError"] + 0.004 * heston["formulaPrice"]
+    assert set(body["fans"]) == {"gbm", "heston"}
+
+
+def test_custom_heston_settings(client):
+    q = QUERY + "&hVol0=20&hVolLong=15&hKappa=3&hXi=0.8&hRho=-0.9"
+    p = client.get(f"/api/montecarlo?{q}").get_json()["models"]["heston"]["params"]
+    assert (p["vol0"], p["volLongRun"], p["kappa"], p["xi"], p["rho"]) == pytest.approx((0.2, 0.15, 3, 0.8, -0.9))
+
+
+def test_bad_heston_setting(client):
+    resp = client.get(f"/api/montecarlo?{QUERY}&hRho=-1.5")
+    assert resp.status_code == 400 and "hRho" in resp.get_json()["error"]
