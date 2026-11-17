@@ -280,6 +280,13 @@
           <label>Correlation ρ<input type="number" step="0.05" min="-0.99" max="0.99" data-param="hRho" placeholder="-0.6"></label>
           <span class="mc-settings-hint">Blank = default. Negative ρ means volatility rises when the price falls (typical for Indian equities).</span>
         </div>
+        <div class="mc-settings-grid" data-model="jumps">
+          <span class="mc-settings-title">Merton (jumps)</span>
+          <label>Jumps per year<input type="number" step="0.5" min="0" data-param="jLambda" placeholder="1.0"></label>
+          <label>Average jump %<input type="number" step="1" data-param="jMean" placeholder="-5"></label>
+          <label>Jump size spread %<input type="number" step="1" min="0.1" data-param="jVol" placeholder="8"></label>
+          <span class="mc-settings-hint">Jumps come on top of the normal day-to-day volatility σ. A negative average means sudden drops are likelier than sudden spikes.</span>
+        </div>
       </details>
       <div class="mc-compare" id="mcCompare">
         <div class="mc-empty">Fetch live data (or fill the inputs above) and the lab will price the same option by simulation next to Black-Scholes.</div>
@@ -295,6 +302,7 @@
             <select id="mcFanModel" class="mc-inline-select">
               <option value="gbm">Constant vol</option>
               <option value="heston">Heston</option>
+              <option value="jumps">Merton jumps</option>
             </select>
           </div>
           <div class="mc-chart-body"><canvas id="mcFan"></canvas></div>

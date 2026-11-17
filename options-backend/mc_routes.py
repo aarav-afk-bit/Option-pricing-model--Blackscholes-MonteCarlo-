@@ -3,6 +3,7 @@ Monte Carlo Lab API.
 
   GET /api/montecarlo?spot=&strike=&days=&rate=&div=&vol=&type=call|put&paths=&seed=
       optional Heston settings: hVol0=&hVolLong=&hKappa=&hXi=&hRho=  (vols in %)
+      optional jump settings:   jLambda=&jMean=&jVol=                (jumps/year, sizes in %)
 
 Prices one contract with Black-Scholes and every Monte Carlo model side by
 side. Inputs are passed explicitly (not fetched from NSE) so the lab works
@@ -17,6 +18,7 @@ from flask import Blueprint, jsonify, request
 
 from montecarlo.engine import Contract, gbm_convergence, gbm_fan, price_gbm
 from montecarlo.heston import HestonParams, heston_fan, heston_price_cf, price_heston_mc
+from montecarlo.jumps import JumpParams, merton_fan, merton_price, price_merton_mc
 from pricing import black_scholes
 
 mc_api = Blueprint("montecarlo", __name__)
@@ -82,7 +84,16 @@ def parse_heston(sigma):
     )
 
 
-def run_models(contract, sigma, paths, seed, heston):
+def parse_jumps():
+    base = JumpParams()
+    return JumpParams(
+        lam=_num("jLambda", base.lam, low=0, high=50),
+        jump_mean=_num("jMean", base.jump_mean * 100, low=-50, high=50) / 100,
+        jump_vol=_num("jVol", base.jump_vol * 100, low=0.1, high=100) / 100,
+    )
+
+
+def run_models(contract, sigma, paths, seed, heston, jumps):
     """Every Monte Carlo model in the lab, keyed by id. Later models plug in here."""
     return {
         "gbm": {
@@ -98,13 +109,25 @@ def run_models(contract, sigma, paths, seed, heston):
             "formulaPrice": heston_price_cf(contract, heston),
             **price_heston_mc(contract, heston, paths, seed),
         },
+        "jumps": {
+            "label": "Merton (jumps)",
+            "description": "Adds sudden gaps (results, budget day, global shocks) on top of normal moves, "
+                           "so far-from-the-money options are worth more.",
+            "params": jumps.as_dict(),
+            "formulaPrice": merton_price(contract, sigma, jumps),
+            **price_merton_mc(contract, sigma, jumps, paths, seed),
+        },
     }
 
 
-def fans(contract, sigma, seed, heston):
+def fans(contract, sigma, seed, heston, jumps):
     if contract.T <= 0:
         return {}
-    return {"gbm": gbm_fan(contract, sigma, seed=seed), "heston": heston_fan(contract, heston, seed=seed)}
+    return {
+        "gbm": gbm_fan(contract, sigma, seed=seed),
+        "heston": heston_fan(contract, heston, seed=seed),
+        "jumps": merton_fan(contract, sigma, jumps, seed=seed),
+    }
 
 
 @mc_api.get("/api/montecarlo")
@@ -112,12 +135,13 @@ def montecarlo():
     try:
         contract, sigma, paths, seed = parse_request()
         heston = parse_heston(sigma)
+        jumps = parse_jumps()
     except BadInput as exc:
         return jsonify({"error": str(exc)}), 400
 
     started = time.perf_counter()
     bs = black_scholes(contract.S, contract.K, contract.T, contract.r, sigma, contract.q)
-    models = run_models(contract, sigma, paths, seed, heston)
+    models = run_models(contract, sigma, paths, seed, heston, jumps)
     return jsonify({
         "inputs": {"spot": contract.S, "strike": contract.K, "days": round(contract.T * 365, 4),
                    "rate": contract.r, "div": contract.q, "vol": sigma,
@@ -125,6 +149,6 @@ def montecarlo():
         "blackScholes": {"price": bs["call"] if contract.is_call else bs["put"]},
         "models": models,
         "convergence": gbm_convergence(contract, sigma, paths, seed),
-        "fans": fans(contract, sigma, seed, heston),
+        "fans": fans(contract, sigma, seed, heston, jumps),
         "elapsedMs": round((time.perf_counter() - started) * 1000, 1),
     })

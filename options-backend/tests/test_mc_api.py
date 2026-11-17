@@ -66,7 +66,7 @@ def test_heston_model_is_returned_with_its_settings(client):
     assert heston["params"]["vol0"] == pytest.approx(0.13)
     assert heston["params"]["rho"] == pytest.approx(-0.6)
     assert abs(heston["price"] - heston["formulaPrice"]) < 4 * heston["stdError"] + 0.004 * heston["formulaPrice"]
-    assert set(body["fans"]) == {"gbm", "heston"}
+    assert {"gbm", "heston"} <= set(body["fans"])
 
 
 def test_custom_heston_settings(client):
@@ -78,3 +78,11 @@ def test_custom_heston_settings(client):
 def test_bad_heston_setting(client):
     resp = client.get(f"/api/montecarlo?{QUERY}&hRho=-1.5")
     assert resp.status_code == 400 and "hRho" in resp.get_json()["error"]
+
+
+def test_jump_model_is_returned_with_its_settings(client):
+    body = client.get(f"/api/montecarlo?{QUERY}&jLambda=3&jMean=-8&jVol=10").get_json()
+    jumps = body["models"]["jumps"]
+    assert jumps["params"] == pytest.approx({"lam": 3, "jump_mean": -0.08, "jump_vol": 0.10})
+    assert abs(jumps["price"] - jumps["formulaPrice"]) < 4 * jumps["stdError"]
+    assert "jumps" in body["fans"]
