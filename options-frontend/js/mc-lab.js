@@ -48,7 +48,10 @@
       `<span class="meta">${m.paths.toLocaleString('en-IN')} paths${m.efficiencyGain ? ` · ${m.efficiencyGain.toFixed(0)}× fewer paths than plain MC` : ''}</span>`,
     ];
     if(m.formulaPrice != null){
-      lines.push(`<span class="meta">Formula check: ${rupees(m.formulaPrice)}</span>`);
+      lines.push(`<span class="meta">${esc(m.checkLabel || 'Formula check')}: ${rupees(m.formulaPrice)}</span>`);
+    }
+    if(m.earlyExercisePremium != null){
+      lines.push(`<span class="meta">Early-exercise premium ${rupees(m.earlyExercisePremium)} · exercised early on ${(m.exerciseShare*100).toFixed(0)}% of paths</span>`);
     }
     return card('', m.label, m.price, lines, m.description);
   }
@@ -58,7 +61,11 @@
     const cards = [card('bs', 'Black-Scholes (formula)', bsPrice,
       [`<span class="meta">σ ${(data.inputs.vol*100).toFixed(2)}% · ${data.inputs.days} days</span>`],
       'Closed-form price: constant volatility, log-normal returns.')];
-    Object.values(data.models).forEach(m=> cards.push(modelCard(m, bsPrice)));
+    // JSON object keys arrive sorted alphabetically; show models in a deliberate order.
+    const ORDER = ['gbm', 'heston', 'jumps', 'american'];
+    Object.keys(data.models)
+      .sort((a, b)=> (ORDER.indexOf(a)+1 || 99) - (ORDER.indexOf(b)+1 || 99))
+      .forEach(id=> cards.push(modelCard(data.models[id], bsPrice)));
     if(market){
       cards.push(card('market', 'Market (LTP)', market,
         [`<span class="meta">${signed(market-bsPrice)} vs Black-Scholes</span>`],

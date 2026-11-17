@@ -16,10 +16,11 @@ import time
 
 from flask import Blueprint, jsonify, request
 
+from montecarlo.american import price_american_lsm
 from montecarlo.engine import Contract, gbm_convergence, gbm_fan, price_gbm
 from montecarlo.heston import HestonParams, heston_fan, heston_price_cf, price_heston_mc
 from montecarlo.jumps import JumpParams, merton_fan, merton_price, price_merton_mc
-from pricing import black_scholes
+from pricing import black_scholes, crr_price
 
 mc_api = Blueprint("montecarlo", __name__)
 
@@ -116,6 +117,16 @@ def run_models(contract, sigma, paths, seed, heston, jumps):
             "params": jumps.as_dict(),
             "formulaPrice": merton_price(contract, sigma, jumps),
             **price_merton_mc(contract, sigma, jumps, paths, seed),
+        },
+        "american": {
+            "label": "American (early exercise)",
+            "description": "Longstaff-Schwartz: decides on every simulated day whether exercising beats holding. "
+                           "NSE options are European; this shows what early exercise would be worth.",
+            # Regression at every step is the costliest model, so it gets at most 40,000 paths.
+            **price_american_lsm(contract, sigma, min(paths, 40_000), seed=seed),
+            "formulaPrice": crr_price(contract.S, contract.K, contract.T, contract.r, sigma, contract.q,
+                                      500, contract.option_type, american=True),
+            "checkLabel": "Binomial tree check",
         },
     }
 

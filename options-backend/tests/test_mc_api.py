@@ -86,3 +86,11 @@ def test_jump_model_is_returned_with_its_settings(client):
     assert jumps["params"] == pytest.approx({"lam": 3, "jump_mean": -0.08, "jump_vol": 0.10})
     assert abs(jumps["price"] - jumps["formulaPrice"]) < 4 * jumps["stdError"]
     assert "jumps" in body["fans"]
+
+
+def test_american_model_reports_premium_and_tree_check(client):
+    q = "spot=24512.35&strike=25500&days=70&rate=6.5&vol=13&type=put&paths=40000&seed=3"
+    am = client.get(f"/api/montecarlo?{q}").get_json()["models"]["american"]
+    assert am["checkLabel"] == "Binomial tree check"
+    assert abs(am["price"] - am["formulaPrice"]) < 4 * am["stdError"] + 0.01 * am["formulaPrice"]
+    assert am["earlyExercisePremium"] > 0 and am["paths"] == 40000
