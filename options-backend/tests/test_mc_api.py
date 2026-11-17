@@ -83,7 +83,9 @@ def test_bad_heston_setting(client):
 def test_jump_model_is_returned_with_its_settings(client):
     body = client.get(f"/api/montecarlo?{QUERY}&jLambda=3&jMean=-8&jVol=10").get_json()
     jumps = body["models"]["jumps"]
-    assert jumps["params"] == pytest.approx({"lam": 3, "jump_mean": -0.08, "jump_vol": 0.10})
+    assert {k: jumps["params"][k] for k in ("lam", "jump_mean", "jump_vol")} == pytest.approx(
+        {"lam": 3, "jump_mean": -0.08, "jump_vol": 0.10})
+    assert jumps["params"]["vol"] == pytest.approx(0.13)   # defaults to the input vol
     assert abs(jumps["price"] - jumps["formulaPrice"]) < 4 * jumps["stdError"]
     assert "jumps" in body["fans"]
 
@@ -94,3 +96,49 @@ def test_american_model_reports_premium_and_tree_check(client):
     assert am["checkLabel"] == "Binomial tree check"
     assert abs(am["price"] - am["formulaPrice"]) < 4 * am["stdError"] + 0.01 * am["formulaPrice"]
     assert am["earlyExercisePremium"] > 0 and am["paths"] == 40000
+
+
+def _fake_chain(monkeypatch, expiry="30-Dec-2099"):
+    """A Heston-generated chain served by a fake NSE client."""
+    import numpy as np
+
+    import mc_routes
+    from montecarlo.heston import HestonParams, heston_prices
+
+    spot, strikes = 24512.35, np.arange(22500, 26600, 250, dtype=float)
+    days = (mc_routes.datetime.strptime(expiry, "%d-%b-%Y").date()
+            - mc_routes.datetime.now(mc_routes.ZoneInfo("Asia/Kolkata")).date()).days + 1
+    p = HestonParams(v0=0.15 ** 2, theta=0.17 ** 2, kappa=2.0, xi=0.7, rho=-0.7)
+    calls = heston_prices(spot, strikes, days / 365, 0.065, 0.0, p, np.ones_like(strikes, bool))
+    puts = heston_prices(spot, strikes, days / 365, 0.065, 0.0, p, np.zeros_like(strikes, bool))
+    rows = [{"expiryDate": expiry, "strikePrice": k, "CE": {"lastPrice": c}, "PE": {"lastPrice": pu}}
+            for k, c, pu in zip(strikes, calls, puts, strict=True)]
+    monkeypatch.setattr(mc_routes.nse_client, "get_option_chain",
+                        lambda symbol, expiry=None: {"records": {"underlyingValue": spot, "data": rows}})
+
+
+def test_calibrate_endpoint_fits_the_live_chain(client, monkeypatch):
+    _fake_chain(monkeypatch, "30-Dec-2099")
+    body = client.get("/api/montecarlo/calibrate/nifty?expiry=30-Dec-2099&rate=6.5").get_json()
+    assert body["symbol"] == "NIFTY" and body["best"] == "heston"
+    assert body["fits"]["heston"]["rmseVolPts"] < body["fits"]["blackScholes"]["rmseVolPts"]
+    s = body["labSettings"]
+    assert s["hRho"] == pytest.approx(-0.7, abs=0.15) and s["hKappa"] == 2.0
+    # The settings plug straight back into the pricing endpoint.
+    priced = client.get(f"/api/montecarlo?{QUERY}&" + "&".join(f"{k}={v}" for k, v in s.items()))
+    assert priced.status_code == 200
+    assert priced.get_json()["models"]["jumps"]["params"]["vol"] == pytest.approx(s["jDiffVol"] / 100)
+
+
+@pytest.mark.parametrize("query, status", [("", 400), ("expiry=31-Feb-2099", 400), ("expiry=30-Dec-2099&rate=x", 400)])
+def test_calibrate_endpoint_rejects_bad_input(client, query, status):
+    assert client.get(f"/api/montecarlo/calibrate/NIFTY?{query}").status_code == status
+
+
+def test_calibrate_endpoint_reports_nse_failure(client, monkeypatch):
+    import mc_routes
+
+    def down(*a, **k):
+        raise RuntimeError("blocked")
+    monkeypatch.setattr(mc_routes.nse_client, "get_option_chain", down)
+    assert client.get("/api/montecarlo/calibrate/NIFTY?expiry=30-Dec-2099").status_code == 502

@@ -19,12 +19,12 @@ semi-analytic formula, used to verify the simulation and, later, to calibrate
 the parameters to market prices quickly.
 """
 
+import math
 from dataclasses import asdict, dataclass
 
 import numpy as np
-from scipy.integrate import quad
 
-from montecarlo.engine import antithetic_normals, make_rng, path_fan, price_terminal
+from montecarlo.engine import Contract, antithetic_normals, make_rng, path_fan, price_terminal
 
 
 @dataclass(frozen=True)
@@ -130,21 +130,44 @@ def _char_fn(u, contract, p):
     return np.exp(C + D * p.v0 + iu * np.log(contract.S))
 
 
+_GL_X, _GL_W = np.polynomial.legendre.leggauss(256)
+
+
+def _integration_limit(T, p):
+    """
+    Upper limit for the Fourier integral. The integrand decays like
+    exp(-v T u^2 / 2) for small u but only exponentially, with rate about
+    (v0 + kappa theta T) sqrt(1 - rho^2) / xi, further out when vol-of-vol is
+    high - so take whichever needs the longer range.
+    """
+    v_min = max(min(p.v0, p.theta), 1e-4)
+    gaussian = 12 / math.sqrt(v_min * T)
+    exponential = 35 * p.xi / max((p.v0 + p.kappa * p.theta * T) * math.sqrt(max(1 - p.rho ** 2, 1e-4)), 1e-6)
+    return float(np.clip(max(gaussian, exponential), 50, 5000))
+
+
+def heston_prices(S, K, T, r, q, p, is_call):
+    """
+    Semi-analytic Heston prices for an array of strikes at once by Fourier
+    inversion with Gauss-Legendre quadrature (the characteristic function is
+    shared by every strike, so a whole chain costs about a millisecond).
+    """
+    K = np.atleast_1d(np.asarray(K, dtype=float))
+    c = Contract(S=S, K=1.0, T=T, r=r, q=q)
+    umax = _integration_limit(T, p)
+    u = 0.5 * umax * (_GL_X + 1)
+    w = 0.5 * umax * _GL_W
+    forward = S * math.exp((r - q) * T)
+    phi2 = _char_fn(u, c, p)
+    phi1 = _char_fn(u - 1j, c, p) / forward
+    phase = np.exp(-1j * np.outer(np.log(K), u))
+    P1 = 0.5 + (phase * phi1 / (1j * u)).real @ w / math.pi
+    P2 = 0.5 + (phase * phi2 / (1j * u)).real @ w / math.pi
+    call = S * math.exp(-q * T) * P1 - K * math.exp(-r * T) * P2
+    put = call - S * math.exp(-q * T) + K * math.exp(-r * T)
+    return np.maximum(np.where(is_call, call, put), 0.0)
+
+
 def heston_price_cf(contract, p):
-    """Semi-analytic Heston price by Fourier inversion (accurate to ~1e-6 of spot)."""
-    ln_k = np.log(contract.K)
-    forward = contract.S * np.exp((contract.r - contract.q) * contract.T)
-
-    def integrand(u, j):
-        if j == 1:
-            val = np.exp(-1j * u * ln_k) * _char_fn(u - 1j, contract, p) / (1j * u * forward)
-        else:
-            val = np.exp(-1j * u * ln_k) * _char_fn(u, contract, p) / (1j * u)
-        return val.real
-
-    P1 = 0.5 + quad(integrand, 1e-8, 250, args=(1,), limit=400)[0] / np.pi
-    P2 = 0.5 + quad(integrand, 1e-8, 250, args=(2,), limit=400)[0] / np.pi
-    call = contract.S * np.exp(-contract.q * contract.T) * P1 - contract.K * np.exp(-contract.r * contract.T) * P2
-    if contract.is_call:
-        return float(call)
-    return float(call - contract.S * np.exp(-contract.q * contract.T) + contract.K * np.exp(-contract.r * contract.T))
+    """Semi-analytic Heston price for one contract."""
+    return float(heston_prices(contract.S, contract.K, contract.T, contract.r, contract.q, p, contract.is_call)[0])

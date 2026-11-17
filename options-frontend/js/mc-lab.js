@@ -168,6 +168,94 @@
       `Half of them end between ${rupees(fan.p25[fan.p25.length-1], 0)} and ${rupees(fan.p75[fan.p75.length-1], 0)}.`;
   }
 
+  /* ---------- Calibration to the live chain ---------- */
+  const FIT_STYLE = {
+    blackScholes: { name:'Black-Scholes (one vol)', color:'#7fd4ff', dash:[5,4] },
+    heston:       { name:'Heston', color:'#ffb020', dash:[] },
+    jumps:        { name:'Merton jumps', color:'#c792ea', dash:[] },
+  };
+  let lastCalibration = null;
+
+  function renderCalibration(cal){
+    lastCalibration = cal;
+    const T = cal.days / 365;
+    $('mcCalib').hidden = false;
+    $('mcCalibTitle').textContent = `${cal.symbol} ${cal.expiry} · ${cal.quotes.length} strikes · ${cal.elapsedMs.toFixed(0)} ms`;
+    $('mcCalibTable').innerHTML = '<tr><th>Model</th><th>Avg miss</th><th>Avg ₹ miss</th></tr>' +
+      Object.keys(FIT_STYLE).map(id=>{
+        const f = cal.fits[id];
+        return `<tr class="${cal.best===id ? 'best' : ''}"><td>${FIT_STYLE[id].name}</td>` +
+          `<td>${f.rmseVolPts.toFixed(2)} vol pts</td><td>${rupees(f.rmseRupees)}</td></tr>`;
+      }).join('');
+
+    // Plot implied vols: market dots vs each fitted model's smile.
+    const ivOf = (price, q)=> impliedVol(price, cal.spot, q.strike, T, cal.rate, cal.div, q.type) * 100;
+    const datasets = [{ label:'Market', data:cal.quotes.map(q=>({ x:q.strike, y:q.iv*100 })), type:'scatter',
+      backgroundColor:'#eae7dc', pointRadius:3.5 }];
+    Object.keys(FIT_STYLE).forEach(id=>{
+      const s = FIT_STYLE[id];
+      datasets.push({ label:s.name, data:cal.fits[id].prices.map((p, i)=>({ x:cal.quotes[i].strike, y:ivOf(p, cal.quotes[i]) }))
+        .filter(pt=>isFinite(pt.y)), borderColor:s.color, borderDash:s.dash, borderWidth:2, pointRadius:0, tension:0.3 });
+    });
+    datasets.push({ label:'_spot', data:[{x:cal.spot, y:Math.min(...cal.quotes.map(q=>q.iv*100))}, {x:cal.spot, y:Math.max(...cal.quotes.map(q=>q.iv*100))}],
+      borderColor:'rgba(155,156,143,0.5)', borderDash:[2,3], borderWidth:1, pointRadius:0 });
+    drawChart('mcSmileFit', {
+      type:'line', data:{ datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:false,
+        interaction:{ mode:'nearest', intersect:false },
+        plugins:{ legend:LEGEND, tooltip:{ ...TOOLTIP, filter:(i)=> !i.dataset.label.startsWith('_'),
+          callbacks:{ title:(it)=> it.length ? `Strike ${it[0].parsed.x.toLocaleString('en-IN')}` : '',
+                      label:(c)=> `${c.dataset.label}: ${c.parsed.y.toFixed(2)}%` } } },
+        scales:{
+          x:{ type:'linear', ticks:{ ...TICK, maxRotation:0, callback:(v)=> Number(v).toLocaleString('en-IN') }, grid:GRID, title:axisTitle('Strike (dotted line = spot)') },
+          y:{ ticks:{ ...TICK, callback:(v)=> v+'%' }, grid:GRID, title:axisTitle('Implied volatility') },
+        },
+      },
+    });
+
+    const bs = cal.fits.blackScholes.rmseVolPts, best = cal.fits[cal.best];
+    $('mcCalibFoot').textContent = cal.best === 'blackScholes'
+      ? `Today's prices are close to a single volatility, so Black-Scholes already fits them well (average miss ${bs.toFixed(2)} vol points).`
+      : `Black-Scholes has to use one volatility for every strike, so it misses today's prices by ${bs.toFixed(2)} volatility points on average. ` +
+        `${FIT_STYLE[cal.best].name} reproduces the smile to within ${best.rmseVolPts.toFixed(2)} — about ${Math.max(bs/Math.max(best.rmseVolPts,1e-3),1).toFixed(0)}× closer. ` +
+        `Press "Use calibrated settings" to price this contract with the market-fitted models.`;
+  }
+
+  async function calibrateToMarket(){
+    const status = $('mcStatus');
+    const symbol = $('pSymbol').value.trim();
+    const expiry = $('expirySelect').value;
+    if(!symbol || !/^\d{2}-[A-Za-z]{3}-\d{4}$/.test(expiry)){
+      status.textContent = 'Pick a symbol and expiry first — calibration uses that expiry\'s live option chain.';
+      status.className = 'mc-status err';
+      return;
+    }
+    const qs = new URLSearchParams({ expiry, rate: $('pRate').value || 6.5, div: $('pDiv').value || 0 });
+    $('mcCalibrate').disabled = true;
+    status.className = 'mc-status';
+    status.textContent = `Fitting models to the ${symbol} ${expiry} chain…`;
+    try{
+      renderCalibration(await apiGet(`/api/montecarlo/calibrate/${encodeURIComponent(symbol)}?${qs}`));
+      status.textContent = 'Calibrated to today\'s market.';
+    }catch(err){
+      status.textContent = `Calibration failed: ${err.message}`;
+      status.className = 'mc-status err';
+    }finally{
+      $('mcCalibrate').disabled = false;
+    }
+  }
+
+  function applyCalibration(){
+    if(!lastCalibration) return;
+    Object.entries(lastCalibration.labSettings).forEach(([param, value])=>{
+      const el = document.querySelector(`#mcSettings [data-param="${param}"]`);
+      if(el) el.value = value;
+    });
+    $('mcSettings').open = true;
+    run();
+  }
+
   async function run(){
     const { inputs, market, error } = readInputs();
     const status = $('mcStatus');
@@ -197,6 +285,8 @@
   }
 
   $('mcRun').addEventListener('click', run);
+  $('mcCalibrate').addEventListener('click', calibrateToMarket);
+  $('mcCalibApply').addEventListener('click', applyCalibration);
   $('mcFanModel').addEventListener('change', ()=>{ if(lastData) renderFan(lastData); });
   $('mcSettings').addEventListener('change', ()=>{ if(lastRun) run(); });
   $('mcPaths').addEventListener('change', ()=>{ if(lastRun) run(); });

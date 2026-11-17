@@ -267,7 +267,19 @@
         <label class="mc-check"><input type="checkbox" id="mcAuto" checked> Run with every analysis</label>
         <label class="mc-check"><input type="checkbox" id="mcFixedSeed"> Repeatable (fixed seed)</label>
         <button class="run-btn" id="mcRun">RUN SIMULATION</button>
+        <button class="run-btn secondary" id="mcCalibrate" title="Fit every model to today's prices for this expiry">CALIBRATE TO MARKET</button>
         <span class="mc-status" id="mcStatus">Uses the inputs in the strip above.</span>
+      </div>
+      <div class="mc-calib" id="mcCalib" hidden>
+        <div class="mc-calib-head">
+          <span class="mc-chart-title">Fit to today's market · <span id="mcCalibTitle"></span></span>
+          <button class="run-btn secondary" id="mcCalibApply">USE CALIBRATED SETTINGS</button>
+        </div>
+        <div class="mc-calib-body">
+          <table class="mc-calib-table" id="mcCalibTable"></table>
+          <div class="mc-chart-body"><canvas id="mcSmileFit"></canvas></div>
+        </div>
+        <div class="mc-chart-foot" id="mcCalibFoot"></div>
       </div>
       <details class="mc-settings" id="mcSettings">
         <summary>Model settings</summary>
@@ -282,6 +294,7 @@
         </div>
         <div class="mc-settings-grid" data-model="jumps">
           <span class="mc-settings-title">Merton (jumps)</span>
+          <label>Normal vol %<input type="number" step="0.5" data-param="jDiffVol" placeholder="= σ"></label>
           <label>Jumps per year<input type="number" step="0.5" min="0" data-param="jLambda" placeholder="1.0"></label>
           <label>Average jump %<input type="number" step="1" data-param="jMean" placeholder="-5"></label>
           <label>Jump size spread %<input type="number" step="1" min="0.1" data-param="jVol" placeholder="8"></label>
