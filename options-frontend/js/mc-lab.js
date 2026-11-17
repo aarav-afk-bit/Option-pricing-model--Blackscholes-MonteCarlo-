@@ -60,6 +60,60 @@
     $('mcCompare').innerHTML = cards.join('');
   }
 
+  /* Shared look for the lab's charts (kept local so the lab doesn't depend on app.js). */
+  const charts = {};
+  const TICK = { color:'#5c5d54', font:{ family:'JetBrains Mono', size:9.5 } };
+  const GRID = { color:'#1d1e18' };
+  const axisTitle = (text)=> ({ display:true, text, color:'#7d7e72', font:{ family:'JetBrains Mono', size:9.5 } });
+  function drawChart(id, config){
+    if(!window.Chart) return;
+    if(charts[id]) charts[id].destroy();
+    charts[id] = new Chart($(id).getContext('2d'), config);
+  }
+  const LEGEND = { labels:{ color:'#9b9c8f', font:{ family:'JetBrains Mono', size:10 }, boxWidth:12,
+    filter:(item)=> !item.text.startsWith('_') } };   // "_..." datasets are band edges, not legend entries
+  const TOOLTIP = { backgroundColor:'#16170f', borderColor:'#282a22', borderWidth:1, titleColor:'#ffb020',
+    bodyColor:'#eae7dc', titleFont:{ family:'JetBrains Mono' }, bodyFont:{ family:'JetBrains Mono', size:11 } };
+
+  /* Running estimate vs paths for plain and variance-reduced Monte Carlo,
+     each with its 95% band, against the Black-Scholes price. */
+  function renderConvergence(data){
+    const conv = data.convergence || [];
+    if(!conv.length) return;
+    const bs = data.blackScholes.price;
+    const pts = (key, f)=> conv.map(c=>({ x:c.paths, y:f(c[key]) }));
+    const band = (key, color, fill)=> [
+      { label:`_${key} hi`, data:pts(key, v=>v.price + 1.96*v.stdError), borderWidth:0, pointRadius:0, fill:false },
+      { label:`_${key} lo`, data:pts(key, v=>v.price - 1.96*v.stdError), borderWidth:0, pointRadius:0, backgroundColor:fill, fill:'-1' },
+    ];
+    drawChart('mcConvergence', {
+      type:'line',
+      data:{ datasets:[
+        ...band('plain', null, 'rgba(155,156,143,0.15)'),
+        { label:'Plain Monte Carlo', data:pts('plain', v=>v.price), borderColor:'#9b9c8f', borderWidth:1.5, pointRadius:2 },
+        ...band('reduced', null, 'rgba(255,176,32,0.25)'),
+        { label:'Lab engine (variance-reduced)', data:pts('reduced', v=>v.price), borderColor:'#ffb020', borderWidth:2, pointRadius:2 },
+        { label:'Black-Scholes', data:[{x:conv[0].paths, y:bs}, {x:conv[conv.length-1].paths, y:bs}], borderColor:'#7fd4ff', borderDash:[5,4], borderWidth:1.5, pointRadius:0 },
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:false,
+        interaction:{ mode:'nearest', intersect:false },
+        plugins:{ legend:LEGEND, tooltip:{ ...TOOLTIP, filter:(i)=> !i.dataset.label.startsWith('_'),
+          callbacks:{ title:(it)=> it.length ? `${it[0].parsed.x.toLocaleString('en-IN')} paths` : '',
+                      label:(c)=> `${c.dataset.label}: ${rupees(c.parsed.y)}` } } },
+        scales:{
+          x:{ type:'logarithmic', ticks:{ ...TICK, maxRotation:0, callback:(v)=> [1e3,1e4,1e5,2e5,5e4,5e3].includes(v) ? v.toLocaleString('en-IN') : '' }, grid:GRID, title:axisTitle('Simulated paths (log scale)') },
+          y:{ ticks:{ ...TICK, callback:(v)=> '₹'+Number(v).toLocaleString('en-IN') }, grid:GRID, title:axisTitle('Price estimate') },
+        },
+      },
+    });
+    const last = conv[conv.length-1];
+    const ratio = last.plain.stdError / last.reduced.stdError;
+    $('mcConvergenceFoot').textContent =
+      `Shaded bands are 95% intervals. At ${last.paths.toLocaleString('en-IN')} paths the lab engine's band is ${ratio.toFixed(1)}× narrower ` +
+      `than plain Monte Carlo — plain MC would need about ${Math.round(ratio*ratio)}× as many paths to match it.`;
+  }
+
   async function run(){
     const { inputs, market, error } = readInputs();
     const status = $('mcStatus');
@@ -75,6 +129,7 @@
       const data = await apiGet('/api/montecarlo?' + new URLSearchParams(params));
       if(runId !== lastRun) return;   // a newer run started meanwhile
       render(data, market);
+      renderConvergence(data);
       status.textContent = `Done in ${data.elapsedMs.toFixed(0)} ms on the server.`;
       window.dispatchEvent(new CustomEvent('mc-lab:result', { detail:{ data, market } }));
     }catch(err){

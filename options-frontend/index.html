@@ -272,6 +272,13 @@
       <div class="mc-compare" id="mcCompare">
         <div class="mc-empty">Fetch live data (or fill the inputs above) and the lab will price the same option by simulation next to Black-Scholes.</div>
       </div>
+      <div class="mc-charts">
+        <div class="mc-chart">
+          <div class="mc-chart-title">Convergence: the estimate settles as paths are added</div>
+          <div class="mc-chart-body"><canvas id="mcConvergence"></canvas></div>
+          <div class="mc-chart-foot" id="mcConvergenceFoot"></div>
+        </div>
+      </div>
       <div class="mc-note">
         Black-Scholes is a formula: one constant volatility, smooth bell-curve returns. Monte Carlo prices the option by
         simulating thousands of possible futures and averaging the payoff — which lets the lab drop those assumptions.

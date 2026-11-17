@@ -123,3 +123,33 @@ def price_gbm(contract, sigma, paths=50_000, seed=None, use_control=True):
     n_pairs = max(paths // 2, 2)
     ST = gbm_terminal(contract, sigma, n_pairs, make_rng(seed))
     return price_terminal(contract, ST, n_pairs, use_control)
+
+
+def gbm_convergence(contract, sigma, paths=50_000, seed=None, points=12):
+    """
+    How the price estimate settles as paths are added, for plain Monte Carlo
+    and for the variance-reduced estimator, computed on the same random
+    draws. Checkpoints are spaced geometrically from 500 paths to `paths`.
+    """
+    if contract.T <= 0 or sigma <= 0:
+        return []
+    n_pairs = max(paths // 2, 2)
+    ST = gbm_terminal(contract, sigma, n_pairs, make_rng(seed))
+    disc = contract.discount
+    y_all = disc * payoff(ST, contract.K, contract.is_call)
+    # Interleave each draw with its antithetic partner so any prefix holds whole pairs.
+    plain = np.empty(2 * n_pairs)
+    plain[0::2], plain[1::2] = y_all[:n_pairs], y_all[n_pairs:]
+
+    checkpoints = np.unique(np.geomspace(min(250, n_pairs), n_pairs, points).astype(int))
+    series = []
+    for k in checkpoints:
+        sub = np.concatenate([ST[:k], ST[n_pairs:n_pairs + k]])
+        reduced = price_terminal(contract, sub, k)
+        plain_part = summarize(plain[:2 * k], 2 * k)
+        series.append({
+            "paths": int(2 * k),
+            "plain": {"price": plain_part["price"], "stdError": plain_part["stdError"]},
+            "reduced": {"price": reduced["price"], "stdError": reduced["stdError"]},
+        })
+    return series

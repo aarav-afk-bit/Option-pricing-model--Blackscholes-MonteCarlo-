@@ -14,7 +14,7 @@ import time
 
 from flask import Blueprint, jsonify, request
 
-from montecarlo.engine import Contract, price_gbm
+from montecarlo.engine import Contract, gbm_convergence, price_gbm
 from pricing import black_scholes
 
 mc_api = Blueprint("montecarlo", __name__)
@@ -88,5 +88,6 @@ def montecarlo():
                    "type": contract.option_type, "paths": paths, "seed": seed},
         "blackScholes": {"price": bs["call"] if contract.is_call else bs["put"]},
         "models": models,
+        "convergence": gbm_convergence(contract, sigma, paths, seed),
         "elapsedMs": round((time.perf_counter() - started) * 1000, 1),
     })

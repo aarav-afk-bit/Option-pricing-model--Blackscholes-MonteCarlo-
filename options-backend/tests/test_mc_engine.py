@@ -55,3 +55,14 @@ def test_control_variate_removes_known_error():
 def test_expired_or_zero_vol_is_intrinsic():
     assert price_gbm(Contract(110, 100, 0, 0.05), 0.2)["price"] == 10
     assert price_gbm(Contract(90, 100, 0.5, 0.05, option_type="put"), 0.0)["price"] == 10
+
+
+def test_convergence_series_narrows_and_reduced_beats_plain():
+    from montecarlo.engine import gbm_convergence
+    series = gbm_convergence(CASES[0], 0.2, paths=40_000, seed=2)
+    paths = [p["paths"] for p in series]
+    assert paths == sorted(paths) and paths[-1] == 40_000 and len(series) >= 8
+    assert series[-1]["reduced"]["stdError"] < series[0]["reduced"]["stdError"] / 5
+    assert all(p["reduced"]["stdError"] < p["plain"]["stdError"] for p in series)
+    # The last checkpoint uses all the draws, so it equals the full estimate.
+    assert series[-1]["reduced"]["price"] == pytest.approx(price_gbm(CASES[0], 0.2, 40_000, seed=2)["price"])
