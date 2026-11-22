@@ -115,18 +115,51 @@ const GLOSSARY = {
   'chg oi': 'Change in open interest today.',
   'iv': 'Implied volatility (%) at this strike.',
   'ltp': 'Last traded price.',
+
+  // ---- Monte Carlo Lab
+  'monte carlo lab': 'Prices the same option by simulating thousands of possible futures, with models that drop Black-Scholes’ simplifying assumptions, and compares them with the formula and the market price.',
+  'paths': 'How many possible futures to simulate. More paths give a more precise price but take longer (4× the paths halves the error).',
+  'run with every analysis': 'Re-run the simulation automatically after every Fetch Live or Recalc Local.',
+  'repeatable (fixed seed)': 'Use the same random numbers every run, so the same inputs always give exactly the same result.',
+  'model settings': 'Fine-tune the Heston and jump models. Leave a box blank to use its default, or press “Use calibrated settings” to fill them from today’s market.',
+  'black-scholes (formula)': 'The closed-form price: one constant volatility and smooth, bell-curve returns. The yardstick every model is compared with.',
+  'monte carlo (constant vol)': 'Black-Scholes’ own assumptions, priced by simulation instead of the formula. It should agree with Black-Scholes — a check that the simulation works.',
+  'heston (stochastic vol)': 'Volatility itself moves randomly and tends to rise when prices fall, so big downside moves are likelier than Black-Scholes assumes — matching the “skew” in real option prices.',
+  'merton (jumps)': 'Adds sudden price gaps (results, budget day, global shocks) on top of normal moves. Makes far-from-the-money and short-dated options worth more.',
+  'american (early exercise)': 'What the option would be worth if it could be exercised on any day before expiry. NSE options are European (expiry only); this shows what that right would add.',
+  'market (ltp)': 'The option’s last traded price on NSE — what the models are trying to explain.',
+  'convergence: the estimate settles as paths are added': 'How the simulated price homes in as more futures are added. The shaded bands are 95% uncertainty; the lab’s variance reduction makes its band far narrower than plain Monte Carlo.',
+  'simulated futures: where the price could go': 'A fan of simulated price paths up to expiry: the middle 50% and 90% of outcomes, the median path and the strike.',
+  'fit to today’s market': 'Each model’s settings tuned so its prices match today’s option chain for this expiry as closely as possible. A lower miss means the model explains the market better.',
+  "fit to today's market": 'Each model’s settings tuned so its prices match today’s option chain for this expiry as closely as possible. A lower miss means the model explains the market better.',
+  'model': 'The pricing model fitted to today’s market. Black-Scholes uses one volatility for every strike; Heston and Merton can bend to the smile.',
+  'avg miss': 'Typical gap between the model’s prices and the market’s across all strikes, in implied-volatility points (1 point = 1% volatility).',
+  'avg ₹ miss': 'The same typical gap measured in rupees per unit.',
+  'starting vol %': 'Heston: today’s volatility. Blank = the volatility in the input strip.',
+  'long-run vol %': 'Heston: the level volatility drifts back to over time.',
+  'mean reversion κ': 'Heston: how quickly volatility returns to its long-run level. Higher = faster.',
+  'vol of vol ξ': 'Heston: how much volatility itself swings. Higher = fatter tails and a stronger smile.',
+  'correlation ρ': 'Heston: how price moves and volatility moves are linked. Negative (typical for stocks) means volatility rises when prices fall, making downside puts dearer.',
+  'normal vol %': 'Merton: the everyday volatility between jumps. Blank = the volatility in the input strip.',
+  'jumps per year': 'Merton: how many sudden gaps to expect in a year on average.',
+  'average jump %': 'Merton: the typical size of a jump. Negative means sudden drops are likelier than sudden spikes.',
+  'jump size spread %': 'Merton: how much jump sizes vary around the average.',
 };
 
 const TIP_SELECTORS = [
   '.card-head h3', '.mini-card h4', '.param label', '.data-row .k', '.mini-row .k', '.sug-row .k',
   '.price-box .pl', '.sug-price-block .lbl', 'table.greeks td:first-child', 'table.chain thead tr:nth-child(2) th',
+  // Monte Carlo Lab (its model cards are re-rendered on every run; the observer below re-applies tips)
+  '.mc-controls label', '.mc-settings summary', '.mc-settings-title', '.mc-settings-grid label',
+  '.mc-model .name', '.mc-chart-title', '.mc-calib-table th',
 ].join(',');
 
 // Visible label text, ignoring child elements such as the "% — NSE IV" unit hints.
 function labelKey(el){
   let text = '';
   el.childNodes.forEach(n=>{ if(n.nodeType===Node.TEXT_NODE) text += n.textContent; });
-  return text.replace(/\s+/g,' ').trim().toLowerCase();
+  // Trailing separators come from titles followed by live text, e.g. "Fit to today's market · NIFTY ...".
+  return text.replace(/\s+/g,' ').replace(/[\s·:—-]+$/,'').trim().toLowerCase();
 }
 
 function applyTips(root=document){
