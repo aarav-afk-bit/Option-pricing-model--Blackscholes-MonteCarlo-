@@ -29,6 +29,7 @@ from montecarlo.heston import HestonParams, heston_fan, heston_price_cf, price_h
 from montecarlo.jumps import JumpParams, merton_fan, merton_price, price_merton_mc
 from nse_client import nse_client
 from pricing import black_scholes, crr_price
+from ratelimit import rate_limited
 
 mc_api = Blueprint("montecarlo", __name__)
 
@@ -154,7 +155,13 @@ def fans(contract, sigma, seed, heston, jumps, jump_sigma):
     }
 
 
+def _simulation_cost():
+    """Work units for a pricing run: proportional to paths, 50,000 paths = 1."""
+    return float(request.args.get("paths") or DEFAULT_PATHS) / DEFAULT_PATHS
+
+
 @mc_api.get("/api/montecarlo")
+@rate_limited(_simulation_cost)
 def montecarlo():
     try:
         contract, sigma, paths, seed = parse_request()
@@ -191,6 +198,7 @@ def lab_settings(fits):
 
 
 @mc_api.get("/api/montecarlo/calibrate/<symbol>")
+@rate_limited(lambda: 2.0)   # fits three models and calls NSE
 def calibrate_to_market(symbol):
     symbol = symbol.upper()
     expiry = request.args.get("expiry", "")

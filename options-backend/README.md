@@ -143,3 +143,10 @@ curl "http://localhost:5000/api/montecarlo/calibrate/NIFTY?expiry=30-Dec-2026&ra
 
 `paths` is limited to 1,000–200,000; American pricing uses at most 40,000.
 A 50,000-path request with every model takes about a second.
+
+Both endpoints are rate-limited per visitor (`ratelimit.py`) so one person
+or script can't monopolise the server: a 50,000-path run costs 1 unit, a
+calibration 2, and each visitor can spend up to 12 at once, regaining 20 a
+minute. Over the limit the API returns HTTP 429 with a `Retry-After` header.
+Tune with `RATE_LIMIT_PER_MINUTE` (0 turns it off), `RATE_LIMIT_BURST` and
+`TRUSTED_PROXY_HOPS` (how many proxies append to `X-Forwarded-For`; 1 on Render).
