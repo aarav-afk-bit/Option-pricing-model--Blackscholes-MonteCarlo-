@@ -1,0 +1,20 @@
+# Weekly pull requests for outdated dependencies. CI runs the full test
+# suite on each one, so an upgrade only merges if everything still passes.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /options-backend
+    schedule:
+      interval: weekly
+    groups:
+      # numpy and scipy have to move together; one PR for both.
+      scientific:
+        patterns: ["numpy", "scipy"]
+      dev-tools:
+        patterns: ["pytest", "ruff"]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

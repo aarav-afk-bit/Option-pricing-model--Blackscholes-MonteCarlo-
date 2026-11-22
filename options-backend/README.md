@@ -33,7 +33,7 @@ service with everything below already filled in.
 | Build Command | `pip install -r requirements.txt` |
 | Start Command | `gunicorn app:app --timeout 120 --workers 1 --threads 4` |
 | Health Check Path | `/api/health` |
-| Env var `PYTHON_VERSION` | `3.11.9` |
+| Env var `PYTHON_VERSION` | `3.13.5` |
 | Env var `FRONTEND_ORIGIN` | your Vercel URL (or `*`) |
 
 Optional tuning variables (see `config.py`; invalid values fall back to the default):
@@ -90,9 +90,9 @@ fails or every 4 minutes.
 - Index option chains (`NIFTY`, `BANKNIFTY`, `FINNIFTY`, `MIDCPNIFTY`) use
   `type=Indices`, single-stock options use `type=Equity` — the client picks
   the right one automatically.
-- On Render, Python is pinned to 3.11 via `.python-version` / `PYTHON_VERSION`
-  (Render ignores `runtime.txt`, and the pinned numpy/scipy have no wheels
-  for Render's default Python 3.13).
+- On Render, Python is pinned via `.python-version` and `PYTHON_VERSION` in
+  `render.yaml` (currently 3.13.5); keep the two in sync. Dependabot opens
+  weekly PRs for outdated packages, and CI must pass before they merge.
 
 ## Endpoints
 
