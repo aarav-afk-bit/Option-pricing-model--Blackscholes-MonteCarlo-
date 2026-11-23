@@ -20,7 +20,7 @@ jobs:
       - name: Read Python version
         id: python
         run: echo "minor=$(cut -d. -f1,2 .python-version)" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ steps.python.outputs.minor }}
           cache: pip
