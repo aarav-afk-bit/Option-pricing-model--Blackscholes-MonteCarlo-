@@ -13,9 +13,16 @@ jobs:
         working-directory: options-backend
     steps:
       - uses: actions/checkout@v4
+      # .python-version pins the exact release Render deploys (e.g. 3.11.9), but
+      # GitHub only builds recent patch releases for new runner images, so an
+      # exact pin fails before any test runs whenever ubuntu-latest moves on.
+      # Test on the same major.minor with whatever patch the runner provides.
+      - name: Read Python version
+        id: python
+        run: echo "minor=$(cut -d. -f1,2 .python-version)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
-          python-version-file: options-backend/.python-version
+          python-version: ${{ steps.python.outputs.minor }}
           cache: pip
           cache-dependency-path: |
             options-backend/requirements.txt
