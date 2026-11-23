@@ -13,7 +13,7 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
-      - key: PYTHON_VERSION   # Render ignores runtime.txt; numpy 1.26 needs <= 3.12
-        value: "3.11.9"
+      - key: PYTHON_VERSION   # keep in sync with options-backend/.python-version
+        value: "3.13.5"
       - key: FRONTEND_ORIGIN
         value: "*"   # replace with your Vercel URL, e.g. https://options-terminal.vercel.app
