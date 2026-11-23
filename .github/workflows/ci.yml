@@ -12,7 +12,7 @@ jobs:
       run:
         working-directory: options-backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # .python-version pins the exact release Render deploys (e.g. 3.11.9), but
       # GitHub only builds recent patch releases for new runner images, so an
       # exact pin fails before any test runs whenever ubuntu-latest moves on.
@@ -35,7 +35,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
