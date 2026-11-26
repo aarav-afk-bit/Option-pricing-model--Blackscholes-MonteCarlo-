@@ -340,6 +340,31 @@
       <div class="chart-card"><div class="card-head"><h3>Implied Volatility Smile</h3><span class="tag" id="smileTag">NSE IV by strike</span></div><div class="chart-body"><canvas id="chartSmile"></canvas></div></div>
     </div>
 
+    <section class="card strat-card" id="strategyBuilder">
+      <link rel="stylesheet" href="css/strategy.css">
+      <div class="card-head"><h3>Strategy Builder</h3><span class="tag">combine several options</span></div>
+      <div class="strat-presets" id="stratPresets">
+        <button data-preset="longStraddle" title="Buy a call and a put at the same strike: profits from a big move either way">Long straddle</button>
+        <button data-preset="shortStraddle" title="Sell a call and a put at the same strike: profits if the price stays put">Short straddle</button>
+        <button data-preset="longStrangle" title="Buy an out-of-the-money call and put: cheaper than a straddle, needs a bigger move">Long strangle</button>
+        <button data-preset="bullCall" title="Buy a call, sell a higher one: capped profit from a moderate rise, lower cost">Bull call spread</button>
+        <button data-preset="bearPut" title="Buy a put, sell a lower one: capped profit from a moderate fall, lower cost">Bear put spread</button>
+        <button data-preset="ironCondor" title="Sell a strangle and buy wings: earns the premium if the price stays in a range, with limited risk">Iron condor</button>
+      </div>
+      <div class="strat-body">
+        <div class="strat-left">
+          <table class="strat-legs">
+            <thead><tr><th>Side</th><th>Type</th><th>Strike</th><th>Lots</th><th>Premium ₹</th><th>IV</th><th></th></tr></thead>
+            <tbody id="stratLegs"><tr><td colspan="7" class="strat-empty">Pick a ready-made strategy or add legs.</td></tr></tbody>
+          </table>
+          <button class="run-btn secondary strat-add" id="stratAdd">+ ADD LEG</button>
+          <div id="stratResults"></div>
+        </div>
+        <div class="strat-chart"><canvas id="stratChart"></canvas></div>
+      </div>
+      <script src="js/strategy.js" defer></script>
+    </section>
+
     <div class="card chain-card">
       <div class="card-head"><h3>Option Chain</h3><span class="tag" id="chainStats">select a symbol</span></div>
       <div class="chain-wrap">

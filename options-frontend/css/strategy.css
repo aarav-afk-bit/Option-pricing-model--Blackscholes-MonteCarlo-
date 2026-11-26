@@ -1,0 +1,27 @@
+/* ---------- Strategy builder ---------- */
+.strat-presets{ display:flex; flex-wrap:wrap; gap:6px; padding:10px 13px; border-bottom:1px solid var(--border-soft); }
+.strat-presets button{ background:var(--panel2); border:1px solid var(--border); color:var(--text-dim); font-family:var(--mono); font-size:10.5px; padding:5px 10px; border-radius:12px; cursor:pointer; }
+.strat-presets button:hover{ border-color:var(--amber-dim); color:var(--amber); }
+.strat-presets button.active{ border-color:var(--amber); color:var(--amber); background:rgba(255,176,32,0.1); }
+.strat-body{ display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:12px; padding:12px 13px; }
+@media (max-width:900px){ .strat-body{ grid-template-columns:minmax(0,1fr); } }
+.strat-legs{ width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; }
+.strat-legs th:nth-child(1){ width:17%; } .strat-legs th:nth-child(2){ width:16%; } .strat-legs th:nth-child(3){ width:22%; }
+.strat-legs th:nth-child(4){ width:12%; } .strat-legs th:nth-child(5){ width:18%; } .strat-legs th:nth-child(6){ width:10%; }
+.strat-legs th:nth-child(7){ width:5%; }
+.strat-legs th{ text-align:left; font-weight:600; font-size:9.5px; color:var(--text-faint); padding:4px; border-bottom:1px solid var(--border); }
+.strat-legs td{ padding:3px 4px; border-bottom:1px solid var(--border-soft); }
+.strat-legs select, .strat-legs input{ width:100%; min-width:0; background:var(--panel2); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:11px; padding:4px 5px; border-radius:4px; }
+.strat-legs td.iv{ font-family:var(--mono); color:var(--text-dim); text-align:right; }
+.strat-remove{ background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:12px; }
+.strat-remove:hover{ color:var(--red); }
+.strat-add{ margin:8px 0; padding:6px 12px; font-size:10.5px; }
+.strat-empty{ text-align:center; color:var(--text-faint); padding:12px; font-size:11px; }
+.strat-stats{ display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:6px; }
+.strat-stat{ background:var(--panel); border:1px solid var(--border-soft); border-radius:6px; padding:6px 9px; display:flex; flex-direction:column; gap:2px; }
+.strat-stat .k{ font-size:9.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.05em; }
+.strat-stat .v{ font-family:var(--mono); font-size:13px; font-weight:700; color:var(--text); }
+.strat-stat .v.pos{ color:var(--green); }
+.strat-stat .v.neg{ color:var(--red); }
+.strat-note{ font-size:10px; color:var(--text-faint); margin-top:6px; line-height:1.45; }
+.strat-chart{ height:300px; min-width:0; }
