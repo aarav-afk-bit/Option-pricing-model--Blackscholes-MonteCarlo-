@@ -45,3 +45,37 @@ jobs:
         run: node --test 'options-frontend/tests/*.test.js'
       - name: Validate JSON data files
         run: for f in options-frontend/data/*.json options-backend/data/*.json; do node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"; done
+
+  e2e:
+    # Drives the dashboard in a real browser against the backend with a fake NSE.
+    # Playwright publishes its system dependencies per Ubuntu release, so pin one it supports.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read Python version
+        id: python
+        run: echo "minor=$(cut -d. -f1,2 options-backend/.python-version)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.python.outputs.minor }}
+          cache: pip
+          cache-dependency-path: options-backend/requirements.txt
+      - run: pip install -r options-backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: options-frontend/tests/e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: options-frontend/tests/e2e
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Browser tests
+        working-directory: options-frontend/tests/e2e
+        run: npx playwright test
+      - name: Keep traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: options-frontend/tests/e2e/test-results/
+          retention-days: 7
