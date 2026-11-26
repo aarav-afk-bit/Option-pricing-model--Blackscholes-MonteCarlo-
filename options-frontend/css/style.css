@@ -20,6 +20,7 @@
   --sans:'Inter', sans-serif;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
+.print-header{ display:none; }   /* shown only when printing (css/print.css) */
 html,body{background:var(--bg); color:var(--text); font-family:var(--sans); font-size:13px; -webkit-font-smoothing:antialiased;}
 body{
   background-image:
