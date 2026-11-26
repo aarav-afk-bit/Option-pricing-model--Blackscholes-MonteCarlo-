@@ -30,6 +30,7 @@ from werkzeug.exceptions import HTTPException
 import config
 from liquidity import liquidity_summary
 from mc_routes import mc_api
+from analytics_routes import analytics_api
 from nse_client import nse_client, INDEX_SYMBOLS
 from pricing import (
     black_scholes,
@@ -71,6 +72,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 IST = ZoneInfo("Asia/Kolkata")
 
 app.register_blueprint(mc_api)  # Monte Carlo Lab: /api/montecarlo
+app.register_blueprint(analytics_api)  # /api/term-structure
 
 
 # ------------------------------------------------------------------
