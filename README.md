@@ -35,7 +35,16 @@ cd options-backend && pip install -r requirements-dev.txt && python -m pytest
 node --test 'options-frontend/tests/*.test.js'
 ```
 
-CI runs both on every pull request.
+Browser tests drive the real dashboard in Chromium against the backend with
+a fake NSE (desktop and phone sizes):
+
+```bash
+cd options-frontend/tests/e2e
+npm ci && npx playwright install chromium
+npx playwright test
+```
+
+CI runs all three on every pull request.
 
 ## What "live" means here
 

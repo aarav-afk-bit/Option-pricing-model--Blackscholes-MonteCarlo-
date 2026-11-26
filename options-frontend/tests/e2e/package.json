@@ -1,0 +1,12 @@
+{
+  "name": "options-terminal-e2e",
+  "private": true,
+  "description": "Browser tests for the dashboard against the real backend with a fake NSE. Chart.js is pinned here so the tests don't depend on the CDN.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "chart.js": "4.4.4"
+  }
+}
