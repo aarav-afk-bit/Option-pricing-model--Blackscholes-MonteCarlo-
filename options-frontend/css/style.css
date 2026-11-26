@@ -295,3 +295,7 @@ kbd{ font-family:var(--mono); font-size:10px; border:1px solid var(--border); bo
 .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
 .chip{ background:var(--panel2); border:1px solid var(--border); color:var(--amber); font-family:var(--mono); font-size:10.5px; font-weight:700; padding:4px 9px; border-radius:12px; cursor:pointer; transition:border-color .15s, background .15s; }
 .chip:hover, .chip:focus-visible{ border-color:var(--amber-dim); background:rgba(255,176,32,0.1); outline:none; }
+
+/* "copy link" button styled like the card-head tags */
+.tag-btn{ background:none; cursor:pointer; color:var(--amber); border-color:var(--amber-dim); }
+.tag-btn:hover{ background:rgba(255,176,32,0.1); }
