@@ -1,0 +1,14 @@
+/* ---------- Watchlist ---------- */
+.watchlist{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:10px 14px 0; font-size:11px; }
+.wl-label{ font-family:var(--mono); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); }
+.wl-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+.wl-chip{ display:inline-flex; align-items:center; border:1px solid var(--border); border-radius:12px; background:var(--panel2); overflow:hidden; }
+.wl-chip.current{ border-color:var(--amber); }
+.wl-chip button{ background:none; border:none; cursor:pointer; font-family:var(--mono); }
+.wl-go{ color:var(--amber); font-weight:700; font-size:10.5px; padding:4px 4px 4px 10px; }
+.wl-remove{ color:var(--text-faint); font-size:12px; padding:2px 8px 2px 4px; }
+.wl-remove:hover{ color:var(--red); }
+.wl-empty{ color:var(--text-faint); }
+.wl-toggle{ margin-left:auto; background:none; border:1px solid var(--amber-dim); color:var(--amber); font-family:var(--mono); font-size:10.5px; padding:4px 10px; border-radius:12px; cursor:pointer; }
+.wl-toggle.saved{ background:rgba(255,176,32,0.1); }
+.wl-toggle:disabled{ opacity:0.5; cursor:not-allowed; }
