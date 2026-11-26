@@ -62,3 +62,13 @@ the contract in the input strip by simulation next to Black-Scholes:
 
 The lab is self-contained: it reads the dashboard's inputs and watches the
 status line, so `app.js` needs no changes to support it.
+
+## Install as an app
+
+The dashboard is a Progressive Web App: on a phone, use the browser's
+**Add to Home Screen** (Chrome: ⋮ → *Install app*; Safari: Share → *Add to Home
+Screen*) and it opens full-screen with its own icon. `sw.js` caches the app's
+own files so it opens quickly on a slow connection; live prices always come
+from the backend and are never cached. New deploys appear on the next load
+(pages are fetched network-first). If you change `js/config.js`, the new
+backend URL takes effect from the second load after deploying.

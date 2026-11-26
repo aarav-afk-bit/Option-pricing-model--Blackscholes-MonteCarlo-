@@ -1,0 +1,15 @@
+{
+  "name": "Options Terminal — NSE Black-Scholes Desk",
+  "short_name": "Options",
+  "description": "Live NSE option chains priced with Black-Scholes, Greeks and a Monte Carlo lab.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#09090a",
+  "theme_color": "#09090a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
