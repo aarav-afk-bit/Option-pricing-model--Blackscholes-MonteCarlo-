@@ -254,6 +254,7 @@ table.chain td.empty{ text-align:center; padding:18px; cursor:default; color:var
 
 .chart-card{ border:1px solid var(--border); border-radius:10px; background:var(--card); }
 .chart-body{ padding:8px 10px 12px; height:220px; }
+.term-foot{ padding:0 12px 10px; font-size:10.5px; color:var(--text-faint); line-height:1.45; }
 .charts-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(340px,1fr)); gap:12px; }
 
 .check-pass{ color:var(--green); font-family:var(--mono); font-weight:700; }
