@@ -1,0 +1,17 @@
+/* ---------- Mispricing scanner ---------- */
+#scanBody{ display:grid; grid-template-columns:repeat(auto-fit, minmax(380px,1fr)); gap:12px; padding:12px 13px; }
+@media (max-width:720px){ #scanBody{ grid-template-columns:minmax(0,1fr); } .scan-table th:nth-child(5), .scan-table td:nth-child(5){ display:none; } }
+.scan-block{ min-width:0; }
+.scan-title{ font-family:var(--mono); font-size:10px; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+.scan-table{ width:100%; border-collapse:collapse; font-size:11px; font-family:var(--mono); }
+.scan-table th{ text-align:right; font-weight:600; font-size:9.5px; color:var(--text-faint); padding:4px 6px; border-bottom:1px solid var(--border); }
+.scan-table td{ text-align:right; padding:5px 6px; border-bottom:1px solid var(--border-soft); color:var(--text-dim); }
+.scan-table th:first-child, .scan-table td:first-child{ text-align:left; color:var(--text); }
+.scan-table tr[data-strike]{ cursor:pointer; }
+.scan-table tr[data-strike]:hover td{ background:rgba(255,176,32,0.07); }
+.scan-table td.cheap{ color:var(--green); font-weight:700; }
+.scan-table td.rich{ color:var(--red); font-weight:700; }
+.scan-empty{ text-align:center; color:var(--text-faint); font-size:11px; padding:14px; grid-column:1/-1; }
+.scan-note{ grid-column:1/-1; font-size:10px; color:var(--text-faint); line-height:1.5; }
+.scan-refresh{ background:none; border:1px solid var(--border); color:var(--text-faint); font-family:var(--mono); font-size:9px; padding:1px 7px; border-radius:8px; cursor:pointer; }
+.scan-refresh:hover{ color:var(--amber); border-color:var(--amber-dim); }
