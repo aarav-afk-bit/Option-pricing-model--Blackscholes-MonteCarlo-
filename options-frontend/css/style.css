@@ -200,6 +200,8 @@ body.awaiting .card-grid, body.awaiting .charts-grid, body.awaiting .sidebar .su
 .summary-list .good, .summary-list .good strong{ color:var(--green); }
 .summary-list .bad, .summary-list .bad strong{ color:var(--red); }
 .summary-foot{ margin-top:10px; font-size:9.5px; color:var(--text-faint); }
+.export-btn{ margin-left:auto; background:none; border:1px solid var(--amber-dim); color:var(--amber); font-family:var(--mono); font-size:10px; font-weight:700; padding:3px 9px; border-radius:10px; cursor:pointer; }
+.export-btn:hover{ background:rgba(255,176,32,0.1); }
 .card-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:12px; }
 .card{ border:1px solid var(--border); border-radius:10px; background:var(--card); overflow:hidden; }
 .card-head{ padding:9px 13px; border-bottom:1px solid var(--border-soft); display:flex; justify-content:space-between; align-items:center; background:var(--panel2); }
